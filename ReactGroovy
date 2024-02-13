@@ -1,0 +1,73 @@
+pipeline {
+    agent { label 'java-build' }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                // Clone the repository with specific branch
+                git branch: 'main', url: 'https://github.com/chinna01998/Test.git'
+            }
+        }
+
+        stage('Deleting all Images and Re-Building') {
+            steps {
+                script {
+                    def runningContainers = sh script: 'docker ps -q', returnStdout: true
+                    if (runningContainers.trim().isEmpty()) 
+                    {
+                    echo "No containers are currently running, skipping 'docker stop' command."
+                    } 
+                    else 
+                    {
+                    sh 'docker stop $(docker ps -q)'
+                    }
+                }
+           
+                // Build your project (replace with appropriate build commands)
+                sh 'docker images'
+                sh 'cat docker-compose.yaml'
+                //sh 'chmod +x Dockerfile && chmod +x docker-compose'
+                sh 'docker ps -a'
+                sh 'docker ps'
+               // sh 'sudo docker stop $(sudo docker ps -q)'
+               // sh 'sudo docker rm $(sudo docker ps -q)'
+                //sh 'chmod 666 /var/run/docker.sock'
+                script {
+                    def runningImages = sh script: 'docker images -q', returnStdout: true
+                    if (runningImages.trim().isEmpty()) 
+                    {
+                    echo "No containers are currently running, skipping 'sudo docker images' command."
+                    } 
+                    else 
+                    {
+                    sh 'docker rmi -f $(docker images -q)'
+                    }
+                }
+                //sh 'sudo docker rmi $(docker images -q)'
+                // sh 'docker buildx install'
+                // sh 'docker buildx create --name mybuilder'
+                // sh 'docker buildx use mybuilder'
+                // sh 'docker buildx build --platform linux/amd64,linux/arm64 -t ctrmcore:v1 .'
+                //sh 'docker buildx build -t myimage:latest .'
+                sh 'docker build -t myimage:latest .'
+            }
+        }
+
+        stage('Deploy to Staging') {
+            steps {
+                sh 'docker-compose up -d'
+                sh 'docker ps && docker images'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline succeeded! Staging environment updated.'
+        }
+        failure {
+            echo 'Pipeline failed. Staging environment not updated.'
+        }
+    }
+}
+
